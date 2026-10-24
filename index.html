@@ -4,6 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>숫자 찾기 게임</title>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
   <style>
     :root {
       --bg-1: #010d1e;
@@ -43,8 +47,16 @@
       overflow: hidden;
     }
 
+    .layout {
+      display: flex;
+      gap: 22px;
+      align-items: flex-start;
+      justify-content: center;
+      width: min(1100px, 92vw);
+    }
+
     .game-shell {
-      width: min(500px, 88vw);
+      width: min(520px, 88vw);
       background: rgba(13, 25, 39, 0.88);
       border: 1px solid var(--panel-border);
       border-radius: 18px;
@@ -324,6 +336,124 @@
       100% { transform: scale(1); opacity: 1; }
     }
 
+    .ranking-panel {
+      width: 260px;
+      background: rgba(13, 25, 39, 0.88);
+      border: 1px solid var(--panel-border);
+      border-radius: 18px;
+      box-shadow: 0 24px 32px rgba(0, 0, 0, 0.26);
+      padding: 18px 16px 14px;
+    }
+
+    .ranking-header {
+      text-align: center;
+      font-size: 30px;
+      font-weight: 900;
+      margin-bottom: 12px;
+      letter-spacing: -0.04em;
+    }
+
+    .ranking-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .ranking-item {
+      display: grid;
+      grid-template-columns: 26px 1fr auto;
+      gap: 8px;
+      align-items: center;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(146, 166, 196, 0.12);
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-size: 15px;
+    }
+
+    .rank-no {
+      color: var(--blue);
+      font-weight: 900;
+    }
+
+    .rank-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-weight: 700;
+    }
+
+    .rank-score {
+      color: #f2f7ff;
+      font-weight: 800;
+    }
+
+    .nickname-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 9, 18, 0.75);
+      display: grid;
+      place-items: center;
+      z-index: 100;
+    }
+
+    .nickname-modal.hidden {
+      display: none;
+    }
+
+    .nickname-box {
+      width: min(420px, 86vw);
+      background: rgba(10, 25, 39, 0.96);
+      border: 1px solid rgba(141, 169, 205, 0.24);
+      border-radius: 18px;
+      box-shadow: 0 22px 40px rgba(0, 0, 0, 0.38);
+      padding: 24px 20px 20px;
+      text-align: center;
+    }
+
+    .nickname-title {
+      font-size: 28px;
+      font-weight: 900;
+      margin-bottom: 14px;
+    }
+
+    .nickname-input {
+      width: 100%;
+      height: 44px;
+      border-radius: 12px;
+      border: 1px solid rgba(141, 169, 205, 0.22);
+      background: rgba(255,255,255,0.03);
+      color: var(--text);
+      font-size: 18px;
+      padding: 10px 12px;
+      outline: none;
+      margin-bottom: 16px;
+    }
+
+    .nickname-input:focus {
+      border-color: rgba(95, 170, 255, 0.7);
+      box-shadow: 0 0 0 3px rgba(95, 170, 255, 0.12);
+    }
+
+    .nickname-actions {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    @media (max-width: 860px) {
+      .layout {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .ranking-panel {
+        width: min(520px, 88vw);
+      }
+    }
+
     @media (max-width: 500px) {
       .game-shell {
         width: min(92vw, 430px);
@@ -341,40 +471,47 @@
   </style>
 </head>
 <body>
-  <div class="game-shell">
-    <h1 class="title">숫자 찾기 게임</h1>
+  <div class="layout">
+    <div class="game-shell">
+      <h1 class="title">숫자 찾기 게임</h1>
 
-    <div class="status-row">
-      <div class="status-box">
-        <div class="status-title">타이머</div>
-        <div class="timer-wrap">
-          <div id="timerBar"></div>
+      <div class="status-row">
+        <div class="status-box">
+          <div class="status-title">타이머</div>
+          <div class="timer-wrap">
+            <div id="timerBar"></div>
+          </div>
+        </div>
+
+        <div class="status-box">
+          <div class="status-title">피</div>
+          <div id="hearts" class="hearts">♥♥♥</div>
+        </div>
+
+        <div class="status-box">
+          <div class="status-title">레벨</div>
+          <div id="levelValue" class="mini-value">1</div>
+        </div>
+
+        <div class="status-box">
+          <div class="status-title">점수</div>
+          <div id="score" class="mini-value">0</div>
         </div>
       </div>
 
-      <div class="status-box">
-        <div class="status-title">피</div>
-        <div id="hearts" class="hearts">♥♥♥</div>
+      <div class="challenge-box">
+        <div class="challenge-label">찾아야 할 숫자</div>
+        <div id="targetValueBox" class="target-box">5</div>
+        <div class="challenge-hint">반복되는 숫자 패턴 속에서 정답 숫자 1개만 찾으세요.</div>
       </div>
 
-      <div class="status-box">
-        <div class="status-title">레벨</div>
-        <div id="levelValue" class="mini-value">1</div>
-      </div>
-
-      <div class="status-box">
-        <div class="status-title">점수</div>
-        <div id="score" class="mini-value">0</div>
-      </div>
+      <div id="board" class="board" aria-live="polite"></div>
     </div>
 
-    <div class="challenge-box">
-      <div class="challenge-label">찾아야 할 숫자</div>
-      <div id="targetValueBox" class="target-box">5</div>
-      <div class="challenge-hint">반복되는 숫자 패턴 속에서 정답 숫자 1개만 찾으세요.</div>
-    </div>
-
-    <div id="board" class="board" aria-live="polite"></div>
+    <aside class="ranking-panel">
+      <div class="ranking-header">랭킹</div>
+      <ul id="rankingList" class="ranking-list"></ul>
+    </aside>
   </div>
 
   <div id="countdownOverlay" class="countdown-overlay">
@@ -389,7 +526,29 @@
     </div>
   </div>
 
+  <div id="nicknameModal" class="nickname-modal hidden">
+    <div class="nickname-box">
+      <div class="nickname-title">닉네임 입력</div>
+      <input id="nicknameInput" class="nickname-input" maxlength="12" placeholder="닉네임을 입력하세요" />
+      <div class="nickname-actions">
+        <button id="submitRankBtn" class="primary" type="button">랭킹 등록</button>
+      </div>
+    </div>
+  </div>
+
   <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBxjvSwQ7ar6-fJNmgnZiLtOImODyEv0Ko",
+      authDomain: "find-34c29.firebaseapp.com",
+      projectId: "find-34c29",
+      storageBucket: "find-34c29.firebasestorage.app",
+      messagingSenderId: "830240757222",
+      appId: "1:830240757222:web:518bb7aeb549d416a03227"
+    };
+
+    const app = firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
     const boardEl = document.getElementById("board");
     const timerBarEl = document.getElementById("timerBar");
     const heartsEl = document.getElementById("hearts");
@@ -402,6 +561,10 @@
     const finalScoreEl = document.getElementById("finalScore");
     const restartBtn = document.getElementById("restartBtn");
     const gameShell = document.querySelector(".game-shell");
+    const nicknameModal = document.getElementById("nicknameModal");
+    const nicknameInput = document.getElementById("nicknameInput");
+    const submitRankBtn = document.getElementById("submitRankBtn");
+    const rankingListEl = document.getElementById("rankingList");
 
     let lives = 3;
     let score = 0;
@@ -686,6 +849,82 @@
       clearTimer();
       finalScoreEl.textContent = String(score);
       gameOverOverlay.classList.remove("hidden");
+
+      setTimeout(() => {
+        showNicknameModal();
+      }, 300);
+    }
+
+    function showNicknameModal() {
+      nicknameModal.classList.remove("hidden");
+      nicknameInput.value = "";
+      nicknameInput.focus();
+    }
+
+    async function submitScore() {
+      const nick = nicknameInput.value.trim();
+      if (!nick) {
+        alert("닉네임을 입력해주세요.");
+        nicknameInput.focus();
+        return;
+      }
+
+      try {
+        await db.collection("leaderboard").add({
+          name: nick,
+          score: score,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        nicknameModal.classList.add("hidden");
+        loadRanking();
+        gameOverOverlay.classList.add("hidden");
+      } catch (error) {
+        console.error("점수 저장 실패:", error);
+        alert("랭킹 등록에 실패했습니다.");
+      }
+    }
+
+    function renderRanking(items) {
+      rankingListEl.innerHTML = "";
+
+      items.forEach((item, index) => {
+        const li = document.createElement("li");
+        li.className = "ranking-item";
+
+        const rankNo = document.createElement("span");
+        rankNo.className = "rank-no";
+        rankNo.textContent = index + 1;
+
+        const name = document.createElement("span");
+        name.className = "rank-name";
+        name.textContent = item.name;
+
+        const score = document.createElement("span");
+        score.className = "rank-score";
+        score.textContent = item.score;
+
+        li.appendChild(rankNo);
+        li.appendChild(name);
+        li.appendChild(score);
+
+        rankingListEl.appendChild(li);
+      });
+    }
+
+    function loadRanking() {
+      db.collection("leaderboard")
+        .orderBy("score", "desc")
+        .limit(10)
+        .onSnapshot((snapshot) => {
+          const items = [];
+          snapshot.forEach((doc) => {
+            items.push({ id: doc.id, ...doc.data() });
+          });
+          renderRanking(items);
+        }, (error) => {
+          console.error("랭킹 불러오기 실패:", error);
+        });
     }
 
     function restartGame() {
@@ -708,8 +947,19 @@
       });
     }
 
-    restartBtn.addEventListener("click", restartGame);
+    restartBtn.addEventListener("click", () => {
+      restartGame();
+    });
 
+    submitRankBtn.addEventListener("click", submitScore);
+
+    nicknameInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        submitScore();
+      }
+    });
+
+    loadRanking();
     restartGame();
   </script>
 </body>

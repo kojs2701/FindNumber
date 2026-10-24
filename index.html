@@ -446,6 +446,7 @@
       display: flex;
       justify-content: center;
       gap: 12px;
+      flex-wrap: wrap;
     }
 
     @media (max-width: 860px) {
@@ -537,6 +538,7 @@
       <input id="nicknameInput" class="nickname-input" maxlength="12" placeholder="닉네임을 입력하세요" />
       <div class="nickname-actions">
         <button id="submitRankBtn" class="primary" type="button">랭킹 등록</button>
+        <button id="submitAndRestartBtn" class="primary" type="button" style="background: linear-gradient(135deg, #f59e0b, #f97316);">등록 후 다시 시작</button>
       </div>
     </div>
   </div>
@@ -572,6 +574,7 @@
     const nicknameModal = document.getElementById("nicknameModal");
     const nicknameInput = document.getElementById("nicknameInput");
     const submitRankBtn = document.getElementById("submitRankBtn");
+    const submitAndRestartBtn = document.getElementById("submitAndRestartBtn");
     const rankingListEl = document.getElementById("rankingList");
 
     let lives = 3;
@@ -869,7 +872,7 @@
       nicknameInput.focus();
     }
 
-    async function submitScore() {
+    async function submitScore(shouldRestart = true) {
       const nick = nicknameInput.value.trim();
       if (!nick) {
         alert("닉네임을 입력해주세요.");
@@ -886,7 +889,10 @@
 
         nicknameModal.classList.add("hidden");
         loadRanking();
-        gameOverOverlay.classList.add("hidden");
+
+        if (shouldRestart) {
+          restartGame();
+        }
       } catch (error) {
         console.error("점수 저장 실패:", error);
         alert("랭킹 등록에 실패했습니다.");
@@ -959,11 +965,12 @@
       restartGame();
     });
 
-    submitRankBtn.addEventListener("click", submitScore);
+    submitRankBtn.addEventListener("click", () => submitScore(true));
+    submitAndRestartBtn.addEventListener("click", () => submitScore(true));
 
     nicknameInput.addEventListener("keydown", (event) => {
       if (event.key === "Enter") {
-        submitScore();
+        submitScore(true);
       }
     });
 

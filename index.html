@@ -56,7 +56,7 @@
     }
 
     .game-shell {
-      width: min(520px, 88vw);
+      width: min(500px, 88vw);
       background: rgba(13, 25, 39, 0.88);
       border: 1px solid var(--panel-border);
       border-radius: 18px;
@@ -373,6 +373,11 @@
       font-size: 15px;
     }
 
+    .ranking-item.top3 {
+      background: rgba(255,255,255,0.05);
+      border-color: rgba(255, 200, 87, 0.3);
+    }
+
     .rank-no {
       color: var(--blue);
       font-weight: 900;
@@ -546,7 +551,10 @@
       appId: "1:830240757222:web:518bb7aeb549d416a03227"
     };
 
-    const app = firebase.initializeApp(firebaseConfig);
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+
     const db = firebase.firestore();
 
     const boardEl = document.getElementById("board");
@@ -888,9 +896,9 @@
     function renderRanking(items) {
       rankingListEl.innerHTML = "";
 
-      items.forEach((item, index) => {
+      items.slice(0, 10).forEach((item, index) => {
         const li = document.createElement("li");
-        li.className = "ranking-item";
+        li.className = "ranking-item" + (index < 3 ? " top3" : "");
 
         const rankNo = document.createElement("span");
         rankNo.className = "rank-no";

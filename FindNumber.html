@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>숫자 찾기 게임</title>
+  <style>
+    :root {
+      --bg-1: #010d1e;
+      --bg-2: #07182d;
+      --panel-bg: rgba(13, 25, 39, 0.86);
+      --panel-border: rgba(141, 164, 199, 0.28);
+      --cell-bg: rgba(52, 70, 84, 0.72);
+      --cell-border: rgba(141, 164, 199, 0.18);
+      --text: #ebf3ff;
+      --muted: rgba(215, 227, 241, 0.7);
+      --blue: #4ca1ff;
+      --green: #63d97a;
+      --yellow: #f6c75a;
+      --red: #ff5d68;
+      --shadow: rgba(0, 0, 0, 0.32);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+    }
+
+    html, body {
+      height: 100%;
+    }
+
+    body {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background:
+        radial-gradient(circle at top, rgba(58, 117, 189, 0.18), transparent 28%),
+        linear-gradient(180deg, var(--bg-1), var(--bg-2));
+      color: var(--text);
+      overflow: hidden;
+    }
+
+    .game-shell {
+      width: min(500px, 88vw);
+      background: rgba(13, 25, 39, 0.88);
+      border: 1px solid var(--panel-border);
+      border-radius: 18px;
+      box-shadow: 0 24px 32px rgba(0, 0, 0, 0.26);
+      padding: 16px 18px 16px;
+      backdrop-filter: blur(3px);
+      position: relative;
+    }
+
+    .title {
+      text-align: center;
+      font-size: clamp(30px, 4vw, 42px);
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      margin: 4px 0 18px;
+      color: #f2f7ff;
+    }
+
+    .status-row {
+      display: grid;
+      grid-template-columns: 1.7fr 1.1fr 0.8fr 0.9fr;
+      gap: 12px;
+      align-items: stretch;
+      margin-bottom: 16px;
+    }
+
+    .status-box {
+      background: rgba(255,255,255,0.015);
+      border: 1px solid rgba(146, 166, 196, 0.12);
+      border-radius: 12px;
+      min-height: 62px;
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .status-title {
+      font-size: 11px;
+      color: rgba(208, 221, 238, 0.72);
+      letter-spacing: 0.04em;
+      margin-bottom: 8px;
+      text-transform: none;
+    }
+
+    .timer-wrap {
+      width: 100%;
+      height: 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.05);
+      overflow: hidden;
+    }
+
+    #timerBar {
+      height: 100%;
+      width: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #34d399, #f4d35e, #ff5d73);
+      transition: width 0.12s linear, background 0.2s ease;
+    }
+
+    .hearts {
+      font-size: 24px;
+      letter-spacing: 0.12em;
+      color: var(--red);
+      text-shadow: 0 0 12px rgba(255, 77, 109, 0.25);
+      line-height: 1;
+      margin-top: 2px;
+    }
+
+    .mini-value {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      font-size: 18px;
+      font-weight: 900;
+      color: var(--blue);
+      letter-spacing: -0.04em;
+    }
+
+    .challenge-box {
+      background: rgba(27, 40, 54, 0.78);
+      border: 1px solid rgba(104, 140, 178, 0.26);
+      border-radius: 12px;
+      padding: 12px 12px 10px;
+      margin-bottom: 18px;
+      text-align: center;
+      min-height: 112px;
+    }
+
+    .challenge-label {
+      font-size: 12px;
+      color: rgba(206, 219, 236, 0.7);
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    .target-box {
+      display: inline-block;
+      min-width: 72px;
+      padding: 7px 18px 8px;
+      border-radius: 10px;
+      background: rgba(49, 82, 108, 0.18);
+      border: 1px solid rgba(96, 162, 219, 0.28);
+      color: #f5f9ff;
+      font-size: clamp(28px, 4vw, 42px);
+      font-weight: 900;
+      line-height: 1;
+      box-shadow: inset 0 0 14px rgba(91, 159, 255, 0.08);
+    }
+
+    .challenge-hint {
+      margin-top: 12px;
+      font-size: 12px;
+      color: rgba(210, 220, 235, 0.7);
+      line-height: 1.4;
+      text-align: center;
+      min-height: 18px;
+    }
+
+    .board {
+      display: grid;
+      gap: 10px;
+      width: min(75vw, 430px);
+      margin: 0 auto;
+      align-content: center;
+    }
+
+    .cell {
+      appearance: none;
+      border: 1px solid var(--cell-border);
+      background: linear-gradient(180deg, rgba(57, 72, 88, 0.9), rgba(31, 43, 56, 0.9));
+      border-radius: 12px;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      display: grid;
+      place-items: center;
+      color: #f8fbff;
+      font-size: clamp(18px, 2.7vw, 32px);
+      font-weight: 900;
+      cursor: pointer;
+      transition: transform 0.08s ease, border-color 0.08s ease, box-shadow 0.08s ease, background 0.12s ease;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02);
+      user-select: none;
+      position: relative;
+    }
+
+    .cell:hover {
+      transform: translateY(-1px);
+      border-color: rgba(120, 170, 255, 0.38);
+      box-shadow: 0 12px 18px rgba(31, 85, 146, 0.08);
+    }
+
+    .cell:active {
+      transform: translateY(0);
+    }
+
+    .cell.correct-flash {
+      background: linear-gradient(180deg, rgba(255, 90, 90, 0.96), rgba(166, 38, 38, 0.96));
+      border-color: rgba(255, 211, 211, 0.9);
+      box-shadow: 0 0 18px rgba(255, 77, 109, 0.28);
+      animation: flashRed 0.7s ease-in-out 2;
+    }
+
+    @keyframes flashRed {
+      0% { transform: scale(1); }
+      30% { transform: scale(1.04); }
+      70% { transform: scale(1.02); }
+      100% { transform: scale(1); }
+    }
+
+    .floating-score {
+      position: absolute;
+      top: 16px;
+      left: 50%;
+      transform: translate(-50%, 0);
+      opacity: 0;
+      color: #47dc9d;
+      font-size: 34px;
+      font-weight: 900;
+      text-shadow: 0 0 16px rgba(71, 220, 157, 0.25);
+      pointer-events: none;
+      transition: opacity 0.75s ease, transform 0.75s ease;
+      z-index: 10;
+    }
+
+    .floating-score.show {
+      opacity: 1;
+      transform: translate(-50%, -22px);
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      background: rgba(2, 9, 18, 0.72);
+      backdrop-filter: blur(4px);
+      z-index: 20;
+    }
+
+    .overlay.hidden {
+      display: none;
+    }
+
+    .overlay-card {
+      width: min(420px, 84vw);
+      background: rgba(10, 25, 39, 0.96);
+      border: 1px solid rgba(141, 169, 205, 0.24);
+      border-radius: 18px;
+      box-shadow: 0 22px 40px rgba(0, 0, 0, 0.38);
+      padding: 28px 20px 22px;
+      text-align: center;
+    }
+
+    .overlay-title {
+      font-size: clamp(27px, 4vw, 42px);
+      font-weight: 900;
+      color: #f5f9ff;
+      margin-bottom: 16px;
+    }
+
+    .final-score {
+      font-size: clamp(20px, 3vw, 28px);
+      font-weight: 800;
+      color: var(--blue);
+      margin-bottom: 18px;
+    }
+
+    .primary {
+      appearance: none;
+      border: 0;
+      border-radius: 12px;
+      padding: 12px 22px;
+      background: linear-gradient(135deg, #2e7eea, #1bbaf3);
+      color: white;
+      font-size: 18px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 12px 18px rgba(46, 126, 234, 0.25);
+      transition: transform 0.08s ease, filter 0.08s ease;
+    }
+
+    .primary:hover {
+      filter: brightness(1.04);
+      transform: translateY(-1px);
+    }
+
+    .countdown-overlay {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      background: rgba(2, 9, 18, 0.2);
+      z-index: 50;
+      pointer-events: none;
+    }
+
+    .countdown-overlay.hidden {
+      display: none;
+    }
+
+    #countdownNumber {
+      font-size: clamp(110px, 20vw, 220px);
+      font-weight: 900;
+      color: #f4f9ff;
+      text-shadow: 0 0 30px rgba(96, 170, 255, 0.35);
+      animation: pop 0.45s ease-out;
+    }
+
+    @keyframes pop {
+      0% { transform: scale(0.52); opacity: 0.2; }
+      60% { transform: scale(1.12); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    @media (max-width: 500px) {
+      .game-shell {
+        width: min(92vw, 430px);
+        padding: 14px 14px 16px;
+      }
+
+      .status-row {
+        gap: 8px;
+      }
+
+      .title {
+        margin-bottom: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="game-shell">
+    <h1 class="title">숫자 찾기 게임</h1>
+
+    <div class="status-row">
+      <div class="status-box">
+        <div class="status-title">타이머</div>
+        <div class="timer-wrap">
+          <div id="timerBar"></div>
+        </div>
+      </div>
+
+      <div class="status-box">
+        <div class="status-title">피</div>
+        <div id="hearts" class="hearts">♥♥♥</div>
+      </div>
+
+      <div class="status-box">
+        <div class="status-title">레벨</div>
+        <div id="levelValue" class="mini-value">1</div>
+      </div>
+
+      <div class="status-box">
+        <div class="status-title">점수</div>
+        <div id="score" class="mini-value">0</div>
+      </div>
+    </div>
+
+    <div class="challenge-box">
+      <div class="challenge-label">찾아야 할 숫자</div>
+      <div id="targetValueBox" class="target-box">5</div>
+      <div class="challenge-hint">반복되는 숫자 패턴 속에서 정답 숫자 1개만 찾으세요.</div>
+    </div>
+
+    <div id="board" class="board" aria-live="polite"></div>
+  </div>
+
+  <div id="countdownOverlay" class="countdown-overlay">
+    <div id="countdownNumber">3</div>
+  </div>
+
+  <div id="gameOverOverlay" class="overlay hidden" aria-live="assertive">
+    <div class="overlay-card">
+      <div class="overlay-title">게임 오버</div>
+      <div class="final-score">최종 점수: <span id="finalScore">0</span></div>
+      <button id="restartBtn" class="primary" type="button">다시 시작</button>
+    </div>
+  </div>
+
+  <script>
+    const boardEl = document.getElementById("board");
+    const timerBarEl = document.getElementById("timerBar");
+    const heartsEl = document.getElementById("hearts");
+    const levelValueEl = document.getElementById("levelValue");
+    const scoreEl = document.getElementById("score");
+    const targetValueBox = document.getElementById("targetValueBox");
+    const countdownOverlay = document.getElementById("countdownOverlay");
+    const countdownNumber = document.getElementById("countdownNumber");
+    const gameOverOverlay = document.getElementById("gameOverOverlay");
+    const finalScoreEl = document.getElementById("finalScore");
+    const restartBtn = document.getElementById("restartBtn");
+    const gameShell = document.querySelector(".game-shell");
+
+    let lives = 3;
+    let score = 0;
+    let level = 1;
+    let targetValue = 1;
+    let isPlaying = false;
+    let timerId = null;
+    let totalTime = 0;
+    let timeLeft = 0;
+    let solvedCount = 0;
+    let streak = 0;
+
+    function updateHearts() {
+      heartsEl.textContent = "♥".repeat(lives) + "♡".repeat(3 - lives);
+    }
+
+    function updateLevel() {
+      levelValueEl.textContent = String(level);
+    }
+
+    function updateScore() {
+      scoreEl.textContent = String(score);
+    }
+
+    function getLevelConfig(level) {
+      const size = Math.min(level + 2, 8);
+      const time = Math.max(1.5, 9.2 - level * 0.6);
+      return { size, time: Number(time.toFixed(1)) };
+    }
+
+    function clearTimer() {
+      if (timerId) {
+        clearInterval(timerId);
+        timerId = null;
+      }
+    }
+
+    function startTimer(seconds) {
+      clearTimer();
+      totalTime = seconds;
+      timeLeft = seconds;
+
+      timerBarEl.style.width = "100%";
+      timerBarEl.style.background = "linear-gradient(90deg, #34d399, #f4d35e, #ff5d73)";
+
+      timerId = setInterval(() => {
+        timeLeft = Math.max(0, timeLeft - 0.1);
+        const percent = (timeLeft / totalTime) * 100;
+        timerBarEl.style.width = percent + "%";
+
+        if (percent <= 30) {
+          timerBarEl.style.background = "linear-gradient(90deg, #f4d35e, #ff5d73)";
+        } else if (percent <= 60) {
+          timerBarEl.style.background = "linear-gradient(90deg, #34d399, #f4d35e)";
+        } else {
+          timerBarEl.style.background = "linear-gradient(90deg, #34d399, #f4d35e, #ff5d73)";
+        }
+
+        if (timeLeft <= 0) {
+          clearTimer();
+          handleMistake();
+        }
+      }, 100);
+    }
+
+    function getRandomDigit() {
+      return Math.floor(Math.random() * 9) + 1;
+    }
+
+    function getSimilarDigit(value) {
+      const options = [
+        value,
+        (value + 1) > 9 ? 1 : value + 1,
+        (value - 1) < 1 ? 9 : value - 1,
+        (value + 2) > 9 ? (value + 2) - 9 : value + 2,
+        (value - 2) < 1 ? value + 7 : value - 2
+      ];
+      return options[Math.floor(Math.random() * options.length)];
+    }
+
+    function showPlus(amount) {
+      const floating = document.createElement("div");
+      floating.className = "floating-score";
+      floating.textContent = "+" + amount;
+      gameShell.appendChild(floating);
+
+      requestAnimationFrame(() => floating.classList.add("show"));
+
+      setTimeout(() => {
+        floating.remove();
+      }, 700);
+    }
+
+    function flashCorrectCell() {
+      const cells = [...boardEl.querySelectorAll(".cell")];
+      cells.forEach((cell) => {
+        if (String(cell.textContent) === String(targetValue)) {
+          cell.classList.add("correct-flash");
+        }
+      });
+    }
+
+    function buildBoard() {
+      const { size } = getLevelConfig(level);
+      const total = size * size;
+
+      targetValue = getRandomDigit();
+      targetValueBox.textContent = String(targetValue);
+
+      const grid = Array(total).fill(0);
+      const targetIndex = Math.floor(Math.random() * total);
+
+      grid[targetIndex] = targetValue;
+
+      for (let i = 0; i < total; i++) {
+        if (i === targetIndex) continue;
+
+        let value;
+        if (Math.random() < 0.72) {
+          value = getSimilarDigit(targetValue);
+        } else {
+          value = getRandomDigit();
+        }
+
+        while (value === targetValue) {
+          if (Math.random() < 0.72) {
+            value = getSimilarDigit(targetValue);
+          } else {
+            value = getRandomDigit();
+          }
+        }
+
+        grid[i] = value;
+      }
+
+      for (let row = 0; row < size; row++) {
+        for (let col = 0; col < size; col++) {
+          const idx = row * size + col;
+          if (idx === targetIndex) continue;
+
+          let patternValue = ((row + col + targetValue) % 9) + 1;
+
+          if (patternValue === targetValue) {
+            patternValue = ((patternValue + 1) % 9) + 1;
+          }
+
+          if (Math.random() < 0.7) {
+            grid[idx] = patternValue;
+          }
+        }
+      }
+
+      let targetCount = 0;
+      for (let i = 0; i < grid.length; i++) {
+        if (grid[i] === targetValue) targetCount++;
+      }
+
+      if (targetCount !== 1) {
+        for (let i = 0; i < grid.length; i++) {
+          if (i !== targetIndex) {
+            let value = getRandomDigit();
+            while (value === targetValue) {
+              value = getRandomDigit();
+            }
+            grid[i] = value;
+          }
+        }
+        grid[targetIndex] = targetValue;
+      }
+
+      targetCount = 0;
+      for (let i = 0; i < grid.length; i++) {
+        if (grid[i] === targetValue) targetCount++;
+      }
+
+      if (targetCount !== 1) {
+        buildBoard();
+        return;
+      }
+
+      boardEl.innerHTML = "";
+      boardEl.style.gridTemplateColumns = `repeat(${size}, minmax(0, 1fr))`;
+      boardEl.style.gridTemplateRows = `repeat(${size}, minmax(0, 1fr))`;
+
+      const fontSize = Math.max(16, 30 - (size - 3) * 2.2);
+
+      grid.forEach((value) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "cell";
+        btn.textContent = String(value);
+        btn.style.fontSize = `${fontSize}px`;
+        btn.addEventListener("click", () => {
+          if (!isPlaying) return;
+
+          if (Number(btn.textContent) === targetValue) {
+            onCorrectAnswer();
+          } else {
+            handleMistake();
+          }
+        });
+
+        boardEl.appendChild(btn);
+      });
+    }
+
+    function onCorrectAnswer() {
+      streak += 1;
+
+      const gained = streak >= 3 ? level * 2 : level;
+      solvedCount += 1;
+      score += gained;
+
+      updateScore();
+      showPlus(gained);
+
+      level = Math.floor(solvedCount / 5) + 1;
+      updateLevel();
+
+      startRound();
+    }
+
+    function handleMistake() {
+      if (!isPlaying) return;
+
+      streak = 0;
+
+      isPlaying = false;
+      clearTimer();
+      flashCorrectCell();
+
+      setTimeout(() => {
+        lives -= 1;
+        updateHearts();
+
+        if (lives <= 0) {
+          endGame();
+          return;
+        }
+
+        startRound();
+      }, 700);
+    }
+
+    function startRound() {
+      const { time } = getLevelConfig(level);
+      buildBoard();
+      startTimer(time);
+      isPlaying = true;
+    }
+
+    function beginCountdown(callback) {
+      countdownOverlay.classList.remove("hidden");
+      const steps = [3, 2, 1];
+      let idx = 0;
+
+      countdownNumber.textContent = String(steps[idx]);
+      countdownNumber.style.animation = "none";
+      void countdownNumber.offsetWidth;
+      countdownNumber.style.animation = "pop 0.45s ease-out";
+
+      const interval = setInterval(() => {
+        idx += 1;
+
+        if (idx < steps.length) {
+          countdownNumber.textContent = String(steps[idx]);
+          countdownNumber.style.animation = "none";
+          void countdownNumber.offsetWidth;
+          countdownNumber.style.animation = "pop 0.45s ease-out";
+        } else {
+          clearInterval(interval);
+          setTimeout(() => {
+            countdownOverlay.classList.add("hidden");
+            callback();
+          }, 280);
+        }
+      }, 1000);
+    }
+
+    function endGame() {
+      isPlaying = false;
+      clearTimer();
+      finalScoreEl.textContent = String(score);
+      gameOverOverlay.classList.remove("hidden");
+    }
+
+    function restartGame() {
+      lives = 3;
+      score = 0;
+      level = 1;
+      solvedCount = 0;
+      streak = 0;
+
+      updateHearts();
+      updateScore();
+      updateLevel();
+
+      gameOverOverlay.classList.add("hidden");
+      clearTimer();
+
+      beginCountdown(() => {
+        isPlaying = true;
+        startRound();
+      });
+    }
+
+    restartBtn.addEventListener("click", restartGame);
+
+    restartGame();
+  </script>
+</body>
+</html>
